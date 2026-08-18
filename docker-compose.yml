@@ -1,5 +1,48 @@
 version: "3.8"
 services:
+  mods-watch:
+    image: alpine/git:latest
+    container_name: cobblemon-mods-watch
+    restart: unless-stopped
+    volumes:
+      - mc-mods:/mods
+      - mods-repo-cache:/repo
+    environment:
+      POLL_INTERVAL_SECONDS: "300"
+    entrypoint: sh
+    command:
+      - -c
+      - |
+        set -e
+        apk add --no-cache git git-lfs
+        git lfs install
+        LAST_SHA=""
+        while true; do
+          REMOTE_SHA=$(git ls-remote https://github.com/JoJvC/mods.git refs/heads/cobblemon | cut -f1)
+          if [ -n "$REMOTE_SHA" ] && [ "$REMOTE_SHA" != "$LAST_SHA" ]; then
+            echo "$(date '+%F %T') Novo commit detectado: $REMOTE_SHA - sincronizando mods..."
+            if [ -d /repo/.git ]; then
+              git -C /repo fetch origin cobblemon
+              git -C /repo reset --hard origin/cobblemon
+            else
+              rm -rf /repo
+              git clone --branch cobblemon --single-branch https://github.com/JoJvC/mods.git /repo
+            fi
+            rm -rf /mods/*
+            cp -r /repo/mods/. /mods/
+            touch /mods/.synced
+            LAST_SHA="$REMOTE_SHA"
+            echo "$(date '+%F %T') Mods atualizados: $(ls /mods | wc -l) arquivos. Rode 'docker compose restart minecraft-cobblemon' para aplicar."
+          fi
+          sleep "$POLL_INTERVAL_SECONDS"
+        done
+    healthcheck:
+      test: ["CMD-SHELL", "test -f /mods/.synced"]
+      interval: 10s
+      timeout: 5s
+      retries: 60
+      start_period: 10s
+
   minecraft-cobblemon:
     image: itzg/minecraft-server:java21
     container_name: minecraft-cobblemon-expanded
@@ -7,6 +50,9 @@ services:
     stdin_open: true
     tty: true
     network_mode: host
+    depends_on:
+      mods-watch:
+        condition: service_healthy
 
     environment:
       EULA: "TRUE"
@@ -30,7 +76,7 @@ services:
 
     volumes:
       - mc-cobblemon-data:/data
-      - ./mods:/mods
+      - mc-mods:/mods
 
     ports:
       - "25565:25565"
@@ -58,4 +104,8 @@ volumes:
   mc-cobblemon-data:
     driver: local
   mc-cobblemon-backups:
+    driver: local
+  mc-mods:
+    driver: local
+  mods-repo-cache:
     driver: local
