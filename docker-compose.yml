@@ -1,0 +1,61 @@
+version: "3.8"
+services:
+  minecraft-cobblemon:
+    image: itzg/minecraft-server:java21
+    container_name: minecraft-cobblemon-expanded
+    restart: unless-stopped
+    stdin_open: true
+    tty: true
+    network_mode: host
+
+    environment:
+      EULA: "TRUE"
+      TYPE: "FABRIC"
+      VERSION: "1.21.1"
+      DIFFICULTY: "normal"
+      ENABLE_COMMAND_BLOCK: "true"
+      VIEW_DISTANCE: "10"
+      SIMULATION_DISTANCE: "8"
+      ALLOW_FLIGHT: "false"
+      PVP: "true"
+      ONLINE_MODE: "false"
+      MEMORY: "10G"
+      INIT_MEMORY: "2G"
+      JVM_XX_OPTS: "-XX:+UseG1GC -XX:+ParallelRefProcEnabled -XX:MaxGCPauseMillis=200"
+      LOG_TIMESTAMP: "true"
+      TZ: "America/Sao_Paulo"
+      MOTD: "§4Cobblemon §r- Bem-vindo!"
+      MAX_PLAYERS: "20"
+      REMOVE_OLD_MODS: "TRUE"
+
+    volumes:
+      - mc-cobblemon-data:/data
+      - ./mods:/mods
+
+    ports:
+      - "25565:25565"
+  cobblemon-backup:
+    image: alpine:3.19
+    container_name: minecraft-cobblemon-backup-service
+    restart: unless-stopped
+
+    environment:
+      LEVEL_NAME: "world"
+      KEEP_BACKUPS: "7"
+      CRON_SCHEDULE: "0 3 * * *"
+
+    volumes:
+      - mc-cobblemon-data:/minecraft-data:ro
+      - mc-cobblemon-backups:/backups
+
+    command: >
+      sh -c "
+        apk add --no-cache dcron tar gzip &&
+        echo \"$$CRON_SCHEDULE sh -c 'tar -czf /backups/backup_\$$(date +%Y-%m-%d_%H-%M).tar.gz -C /minecraft-data $$LEVEL_NAME && ls -t /backups/*.tar.gz | tail -n +\$$((KEEP_BACKUPS+1)) | xargs rm -f'\" | crontab - &&
+        crond -f -l 2
+      "
+volumes:
+  mc-cobblemon-data:
+    driver: local
+  mc-cobblemon-backups:
+    driver: local
