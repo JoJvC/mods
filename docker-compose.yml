@@ -18,7 +18,7 @@ services:
         git lfs install
         LAST_SHA=""
         while true; do
-          REMOTE_SHA=$(git ls-remote https://github.com/JoJvC/mods.git refs/heads/cobblemon | cut -f1)
+          REMOTE_SHA=$(git ls-remote https://github.com/JoJvC/mods.git refs/heads/cobblemon 2>/dev/null | cut -f1) || REMOTE_SHA=""
           if [ -n "$REMOTE_SHA" ] && [ "$REMOTE_SHA" != "$LAST_SHA" ]; then
             echo "$(date '+%F %T') Novo commit detectado: $REMOTE_SHA - sincronizando mods..."
             if [ -d /repo/.git ]; then
@@ -38,10 +38,10 @@ services:
         done
     healthcheck:
       test: ["CMD-SHELL", "test -f /mods/.synced"]
-      interval: 10s
+      interval: 15s
       timeout: 5s
-      retries: 60
-      start_period: 10s
+      retries: 5
+      start_period: 900s
 
   minecraft-cobblemon:
     image: itzg/minecraft-server:java21
