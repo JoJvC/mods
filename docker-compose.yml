@@ -25,7 +25,7 @@ services:
               git -C /repo fetch origin cobblemon
               git -C /repo reset --hard origin/cobblemon
             else
-              rm -rf /repo
+              rm -rf /repo/* /repo/.[!.]* 2>/dev/null || true
               git clone --branch cobblemon --single-branch https://github.com/JoJvC/mods.git /repo
             fi
             rm -rf /mods/*
