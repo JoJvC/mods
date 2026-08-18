@@ -6,6 +6,7 @@ services:
     restart: unless-stopped
     volumes:
       - mc-mods:/mods
+      - mc-cobblemon-data:/data
       - mods-repo-cache:/repo
     environment:
       POLL_INTERVAL_SECONDS: "300"
@@ -20,7 +21,7 @@ services:
         while true; do
           REMOTE_SHA=$(git ls-remote https://github.com/JoJvC/mods.git refs/heads/cobblemon 2>/dev/null | cut -f1) || REMOTE_SHA=""
           if [ -n "$$REMOTE_SHA" ] && [ "$$REMOTE_SHA" != "$$LAST_SHA" ]; then
-            echo "$(date '+%F %T') Novo commit detectado: $$REMOTE_SHA - sincronizando mods..."
+            echo "$(date '+%F %T') Novo commit detectado: $$REMOTE_SHA - sincronizando mods e config..."
             if [ -d /repo/.git ]; then
               git -C /repo fetch origin cobblemon
               git -C /repo reset --hard origin/cobblemon
@@ -31,8 +32,11 @@ services:
             rm -rf /mods/*
             cp -r /repo/mods/. /mods/
             touch /mods/.synced
+            mkdir -p /data/config
+            cp -r /repo/config/. /data/config/
+            chown -R 1000:1000 /data/config
             LAST_SHA="$$REMOTE_SHA"
-            echo "$(date '+%F %T') Mods atualizados: $(ls /mods | wc -l) arquivos. Rode 'docker compose restart minecraft-cobblemon' para aplicar."
+            echo "$(date '+%F %T') Mods e config atualizados: $(ls /mods | wc -l) mods. Rode 'docker compose restart minecraft-cobblemon' para aplicar."
           fi
           sleep "$$POLL_INTERVAL_SECONDS"
         done
