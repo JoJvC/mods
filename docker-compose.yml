@@ -5,9 +5,9 @@ services:
     container_name: cursed-walking-mods-watch
     restart: unless-stopped
     volumes:
-      - mc-mods:/mods
+      - mc-cursedwalking-mods:/mods
       - mc-cursedwalking-data:/data
-      - mods-repo-cache:/repo
+      - cursedwalking-repo-cache:/repo
     environment:
       POLL_INTERVAL_SECONDS: "300"
     entrypoint: sh
@@ -84,7 +84,7 @@ services:
 
     volumes:
       - mc-cursedwalking-data:/data
-      - mc-mods:/mods
+      - mc-cursedwalking-mods:/mods
 
     ports:
       - "25565:25565"
@@ -113,7 +113,7 @@ volumes:
     driver: local
   mc-cursedwalking-backups:
     driver: local
-  mc-mods:
+  mc-cursedwalking-mods:
     driver: local
-  mods-repo-cache:
+  cursedwalking-repo-cache:
     driver: local
